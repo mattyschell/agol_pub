@@ -1,26 +1,24 @@
 try:
-    print('importing {0}'.format('arcgis'))
     from arcgis.gis import GIS
-    print('completed importing {0}'.format('arcgis'))
 except ImportError as e: 
     raise ImportError("Failed to import arcgis. Check that you are calling from ArcGIS Pro python") from e
 
 import os
-import publisher
-from pprint import pformat
 
 # probably just one class here for now
 
-class nycmaps(object):
+class Organization(object):
 
     def __init__(self
                 ,user 
                 ,creds
-                ,url="https://nyc.maps.arcgis.com/"):
+                ,url="https://nyc.maps.arcgis.com/"
+                ,gis=None):
 
         self.user  = user
         self.creds = creds
         self.url   = url
+        self.proxy = None
 
         if 'PROXY' in os.environ:
             self.proxy = {
@@ -28,10 +26,13 @@ class nycmaps(object):
                ,'https': os.environ['PROXY']
             }
 
-        self.gis = GIS(url
-                      ,user
-                      ,creds
-                      ,proxy=self.proxy)
+        if gis is not None:
+            self.gis = gis
+        else:
+            self.gis = GIS(url
+                          ,user
+                          ,creds
+                          ,proxy=self.proxy)
         
         self.token = self.gis.session.auth.token
 

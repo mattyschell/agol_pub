@@ -11,8 +11,8 @@ class OrganizationTestCase(unittest.TestCase):
         self.testuser  = os.environ['NYCMAPSUSER']
         self.testcreds = os.environ['NYCMAPCREDS']
 
-        self.org = organization.nycmaps(self.testuser
-                                       ,self.testcreds)
+        self.org = organization.Organization(self.testuser
+                            ,self.testcreds)
 
     @classmethod
     def tearDownClass(self):

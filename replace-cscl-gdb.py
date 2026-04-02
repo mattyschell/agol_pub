@@ -35,9 +35,10 @@ def main():
 
     try:
 
-        org = organization.nycmaps(os.environ['NYCMAPSUSER']
-                                  ,os.environ['NYCMAPCREDS'])
-        filegdb = publisher.localgdb(args.srcgdb)
+        org = organization.Organization(os.environ['NYCMAPSUSER']
+                           ,os.environ['NYCMAPCREDS'])
+        filegdb = publisher.LocalGeodatabase(args.srcgdb)
+        filepub = publisher.PublishWorkflow(filegdb)
     
     except Exception as e:
         raise ValueError("Failure {0} in instantiation".format(e)) 
@@ -57,18 +58,18 @@ def main():
     logging.info('precleaning any old temp files at {0}'.format(args.tempdir))
     
     # this should succeed 
-    filegdb.clean()
+    filepub.clean()
     
     logging.info('renaming {0} to {1} and zipping it'.format(
                                                         filegdb.gdb
                                                        ,args.targetgdbname))
 
-    pubgdb = publisher.pubitem(org
-                              ,args.targetitemid)
+    pubgdb = publisher.PublishedItem(org
+                                    ,args.targetitemid)
     
     try:
         # a known source (get it) of issues
-        filegdb.renamezip(args.tempdir
+        filepub.renamezip(args.tempdir
                          ,args.targetgdbname)
         retval = 0
     except Exception as e:
@@ -81,7 +82,7 @@ def main():
                                                             args.targetitemid))
 
         try:
-            replaceval = pubgdb.replace(filegdb.zipped)
+            replaceval = pubgdb.replace(filepub.zipped)
             if replaceval:
                 logging.info('Successfully replaced {0}'.format(
                     args.targetgdbname))
@@ -96,7 +97,7 @@ def main():
             retval = 1
         
         try:
-            filegdb.clean()
+            filepub.clean()
         except:
             # https://github.com/mattyschell/agol-pub/issues/4
             # shame 

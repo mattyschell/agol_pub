@@ -5,9 +5,7 @@ import os
 import zipfile
 import shutil
 import argparse
-print('importing arcpy')
 import arcpy
-print('finished importing arcpy')
 import organization
 import publisher
 
@@ -150,23 +148,24 @@ def main():
     
     qalogger = qalogging(targetlog)
 
-    org = organization.nycmaps(os.environ['NYCMAPSUSER']
-                              ,os.environ['NYCMAPCREDS'])
+    org = organization.Organization(os.environ['NYCMAPSUSER']
+                                   ,os.environ['NYCMAPCREDS'])
         
-    pubgdb = publisher.pubitem(org
-                              ,args.pitemid)    
+    pubgdb = publisher.PublishedItem(org
+                                    ,args.pitemid)
     # D:\temp\cscl.gdb.zip
     pubgdb.download(args.ptempdir)
 
     # this will set both 
     # testgdb.gdb      = D:\temp\xyz.gdb
     # testgdb.unzipped = D:\temp\xyz.gdb
-    testgdb = publisher.localgdb(os.path.join(args.ptempdir
-                                             ,args.pgdbname))
-    testgdb.zipped = pubgdb.zipped
-    testgdb.unzip(args.ptempdir)
+    testgdb = publisher.LocalGeodatabase(os.path.join(args.ptempdir
+                                                     ,args.pgdbname))
+    testpub = publisher.PublishWorkflow(testgdb)
+    testpub.zipped = pubgdb.zipped
+    testpub.unzip(args.ptempdir)
     
-    retqareport = report(testgdb
+    retqareport = report(testpub
                         ,args.pgdbname
                         ,args.ptempdir
                         ,args.pzipmb)

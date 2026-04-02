@@ -1,15 +1,21 @@
-import organization
 import os
 import stat
 import shutil
-import time
 from pathlib import Path
 
 # we may manage several types of content
 # simple first case: a local gdb published to an item 
 #                    on the nycmaps organization 
 
-class pubitem(object):
+
+class PublishWorkflowError(Exception):
+    pass
+
+
+class LockFilesPresentError(PublishWorkflowError):
+    pass
+
+class PublishedItem(object):
 
     def __init__(self
                 ,org
@@ -17,7 +23,11 @@ class pubitem(object):
 
         self.org  = org
         self.id   = id
+        self.zipped = None
         self.existingitem = self.org.gis.content.get(self.id)
+
+        if self.existingitem is None:
+            raise ValueError('ArcGIS item not found for id {0}'.format(self.id))
 
     def describe(self):
 
@@ -41,21 +51,31 @@ class pubitem(object):
 
     def clean(self):
 
-         if self.zipped:
+        # Contract: remove the downloaded zip when present, but keep
+        # self.zipped as the original path string so callers can check
+        # os.path.isfile(self.zipped) after cleanup.
+
+        if self.zipped and os.path.isfile(self.zipped):
             # let it throw caller should know
-            os.remove(self.zipped)          
+            os.remove(self.zipped)
 
         
-class localgdb(object):
+class LocalGeodatabase(object):
 
     def __init__(self
                 ,filegdb):
 
-        # we dont check for existence
-        # so we can use clean() as a pre-step
         self.gdb  = filegdb
         self.gdbname = os.path.basename(self.gdb)
         self.gdbpath = os.path.dirname(self.gdb)
+
+
+class PublishWorkflow(object):
+
+    def __init__(self
+                ,localgdb):
+
+        self.localgdb = localgdb
 
         # depending on failure point any of these can exist 
         # and muck up a re-run
@@ -63,6 +83,18 @@ class localgdb(object):
         self.renamed  = None
         self.zipped   = None
         self.unzipped = None
+
+    @property
+    def gdb(self):
+        return self.localgdb.gdb
+
+    @property
+    def gdbname(self):
+        return self.localgdb.gdbname
+
+    @property
+    def gdbpath(self):
+        return self.localgdb.gdbpath
         
     def zip(self
            ,zippath):
@@ -75,10 +107,10 @@ class localgdb(object):
         # start: C:\dir1\mydata.gdb
         # end:   C:\dir2\mydata.gdb.zip        
 
-        zippedsrc = shutil.make_archive(self.gdb
+        zippedsrc = shutil.make_archive(self.localgdb.gdb
                                        ,'zip'
-                                       ,self.gdbpath
-                                       ,self.gdbname)
+                           ,self.localgdb.gdbpath
+                           ,self.localgdb.gdbname)
 
         self.zipped = shutil.move(zippedsrc
                                  ,zippath)
@@ -95,7 +127,8 @@ class localgdb(object):
         # end:   C:\dir2\pubdata.gdb.zip  
         # 1 copy 2 rename 3 zip
 
-        self.tempcopy = os.path.join(zippath,"{0}".format(self.gdbname))
+        self.tempcopy = os.path.join(zippath
+                        ,"{0}".format(self.localgdb.gdbname))
         self.renamed  = os.path.join(zippath,"{0}".format(name))
 
         # pre-clean
@@ -108,21 +141,18 @@ class localgdb(object):
         # the source is not present or is locked down
         # The CSCL production environment is mysterious
         try:
-            shutil.copytree(self.gdb
+            shutil.copytree(self.localgdb.gdb
                            ,self.tempcopy
                            ,ignore=shutil.ignore_patterns("*.lock"))
         except FileNotFoundError as fnf_error:
-            print(f"File not found: {fnf_error}")
             raise FileNotFoundError(f"File not found: {fnf_error}") 
         except PermissionError as perm_error:
-            print(f"Permission error: {perm_error}")
             raise PermissionError(f"Permission error: {perm_error}")
         except shutil.Error as shutil_error:
-            print(f"Shutil error: {shutil_error}")
             raise shutil.Error(f"Shutil error: {shutil_error}")
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            raise Exception(f"An unexpected error occurred: {e}")
+            raise PublishWorkflowError(
+                f"Unexpected error during copytree for {self.localgdb.gdb}: {e}") from e
 
         if not self.has_locks():
             # C:\dir2\mydata.gdb to
@@ -130,9 +160,8 @@ class localgdb(object):
             os.rename(self.tempcopy
                      ,self.renamed)
         else:
-            print('Exiting renamezip without zipping')
-            print('Lock files exist in {0}'.format(self.tempcopy))
-            raise Exception('Lock files exist in {0}'.format(self.tempcopy))
+            raise LockFilesPresentError(
+                'Lock files exist in {0}'.format(self.tempcopy))
         
         # C:\temp\dir2\pubdata.gdb
         # C:\temp\dir2\pubdata.gdb.zip
@@ -206,6 +235,83 @@ class localgdb(object):
 
         if (self.unzipped and os.path.isdir(self.unzipped)):
             shutil.rmtree(self.unzipped, onerror=self.remove_readonly)
+
+
+class pubitem(PublishedItem):
+    pass
+
+
+class localgdb(LocalGeodatabase):
+
+    def __init__(self
+                ,filegdb):
+
+        super().__init__(filegdb)
+        self.workflow = PublishWorkflow(self)
+
+    @property
+    def tempcopy(self):
+        return self.workflow.tempcopy
+
+    @tempcopy.setter
+    def tempcopy(self
+                ,value):
+        self.workflow.tempcopy = value
+
+    @property
+    def renamed(self):
+        return self.workflow.renamed
+
+    @renamed.setter
+    def renamed(self
+               ,value):
+        self.workflow.renamed = value
+
+    @property
+    def zipped(self):
+        return self.workflow.zipped
+
+    @zipped.setter
+    def zipped(self
+              ,value):
+        self.workflow.zipped = value
+
+    @property
+    def unzipped(self):
+        return self.workflow.unzipped
+
+    @unzipped.setter
+    def unzipped(self
+                ,value):
+        self.workflow.unzipped = value
+
+    def zip(self
+           ,zippath):
+        return self.workflow.zip(zippath)
+
+    def renamezip(self
+                 ,zippath
+                 ,name):
+        return self.workflow.renamezip(zippath
+                                      ,name)
+
+    def unzip(self
+             ,unzippath):
+        return self.workflow.unzip(unzippath)
+
+    def remove_readonly(self
+                       ,func
+                       ,path
+                       ,_):
+        return self.workflow.remove_readonly(func
+                                            ,path
+                                            ,_)
+
+    def has_locks(self):
+        return self.workflow.has_locks()
+
+    def clean(self):
+        return self.workflow.clean()
 
 
          

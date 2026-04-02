@@ -19,11 +19,11 @@ class PublishTestCase(unittest.TestCase):
         self.testcreds = os.environ['NYCMAPCREDS']
         self.tempdir = Path(os.environ['TEMP'])
         
-        self.org = organization.nycmaps(self.testuser
-                                       ,self.testcreds)
+        self.org = organization.Organization(self.testuser
+                            ,self.testcreds)
         
-        self.pubgdb = publisher.pubitem(self.org
-                                       ,self.testitemid)
+        self.pubgdb = publisher.PublishedItem(self.org
+                             ,self.testitemid)
 
         self.testdatadir = os.path.join(os.path.dirname(os.path.abspath(__file__))
                                        ,'testdata')
@@ -45,18 +45,30 @@ class PublishTestCase(unittest.TestCase):
         self.testgdbwithlocks = os.path.join(self.testdatadir
                                             ,'samplewithlocks.gdb')
 
-        self.localgdb = publisher.localgdb(self.testgdb)
-        self.emptylocalgdb = publisher.localgdb(self.testemptygdb)
-        self.emptydiffnamelocalgdb = publisher.localgdb(self.testemptydiffnamegdb)
-        self.nonexistentlocalgdb = publisher.localgdb(self.nonexistentgdb)
-        self.localgdbwithlocks = publisher.localgdb(self.testgdbwithlocks)
+        self.localgdb = publisher.LocalGeodatabase(self.testgdb)
+        self.emptylocalgdb = publisher.LocalGeodatabase(self.testemptygdb)
+        self.emptydiffnamelocalgdb = publisher.LocalGeodatabase(
+            self.testemptydiffnamegdb)
+        self.nonexistentlocalgdb = publisher.LocalGeodatabase(
+            self.nonexistentgdb)
+        self.localgdbwithlocks = publisher.LocalGeodatabase(
+            self.testgdbwithlocks)
+
+        self.localpub = publisher.PublishWorkflow(self.localgdb)
+        self.emptylocalpub = publisher.PublishWorkflow(self.emptylocalgdb)
+        self.emptydiffnamelocalpub = publisher.PublishWorkflow(
+            self.emptydiffnamelocalgdb)
+        self.nonexistentlocalpub = publisher.PublishWorkflow(
+            self.nonexistentlocalgdb)
+        self.localpubwithlocks = publisher.PublishWorkflow(
+            self.localgdbwithlocks)
 
     def tearDown(self):
 
-        self.localgdb.clean()
-        self.emptylocalgdb.clean()
-        self.emptydiffnamelocalgdb.clean()
-        self.localgdbwithlocks.clean()
+        self.localpub.clean()
+        self.emptylocalpub.clean()
+        self.emptydiffnamelocalpub.clean()
+        self.localpubwithlocks.clean()
 
     @classmethod
     def tearDownClass(self):
@@ -71,33 +83,33 @@ class PublishTestCase(unittest.TestCase):
 
     def test_blocalgdbzip(self):
 
-        self.localgdb.zip(self.tempdir)
+        self.localpub.zip(self.tempdir)
 
-        self.assertTrue(os.path.isfile(self.localgdb.zipped))
+        self.assertTrue(os.path.isfile(self.localpub.zipped))
 
-        self.localgdb.clean()
-        self.assertFalse(os.path.isfile(self.localgdb.zipped))
+        self.localpub.clean()
+        self.assertFalse(os.path.isfile(self.localpub.zipped))
 
     def test_clocalgdbrenamezip(self):
 
-        self.localgdb.renamezip(self.tempdir
-                               ,'renamesample.gdb')
+        self.localpub.renamezip(self.tempdir
+                       ,'renamesample.gdb')
 
-        self.assertTrue(os.path.isfile(self.localgdb.zipped))
+        self.assertTrue(os.path.isfile(self.localpub.zipped))
 
-        self.localgdb.clean()
-        self.assertFalse(os.path.isfile(self.localgdb.zipped))
-        self.assertFalse(os.path.isdir(self.localgdb.renamed))
+        self.localpub.clean()
+        self.assertFalse(os.path.isfile(self.localpub.zipped))
+        self.assertFalse(os.path.isdir(self.localpub.renamed))
         self.assertTrue(not any(Path(self.tempdir).iterdir()))
 
     def test_dreplaceitem(self):
 
-        self.localgdb.zip(self.tempdir)
+        self.localpub.zip(self.tempdir)
 
-        self.assertTrue(self.pubgdb.replace(self.localgdb.zipped))
+        self.assertTrue(self.pubgdb.replace(self.localpub.zipped))
 
-        self.localgdb.clean()
-        self.assertFalse(os.path.isfile(self.localgdb.zipped))
+        self.localpub.clean()
+        self.assertFalse(os.path.isfile(self.localpub.zipped))
 
     def test_edownload(self):
 
@@ -126,11 +138,11 @@ class PublishTestCase(unittest.TestCase):
         self.assertFalse(os.path.isfile(self.pubgdb.zipped))
 
         # zip up emptygdb and publish it
-        self.emptylocalgdb.zip(self.tempdir)
-        self.assertTrue(self.pubgdb.replace(self.emptylocalgdb.zipped))
+        self.emptylocalpub.zip(self.tempdir)
+        self.assertTrue(self.pubgdb.replace(self.emptylocalpub.zipped))
         
-        self.emptylocalgdb.clean()
-        self.assertFalse(os.path.isfile(self.emptylocalgdb.zipped))
+        self.emptylocalpub.clean()
+        self.assertFalse(os.path.isfile(self.emptylocalpub.zipped))
 
         # download empty samplegdb.zip and get its size
         self.pubgdb.download(self.tempdir)
@@ -138,15 +150,15 @@ class PublishTestCase(unittest.TestCase):
                                             ,'sample.gdb.zip'))
         
         self.pubgdb.clean()        
-        self.assertFalse(os.path.isfile(self.emptylocalgdb.zipped))
+        self.assertFalse(os.path.isfile(self.emptylocalpub.zipped))
 
         # re-publish the original non-empty samplegdb.zip
-        self.localgdb.zip(self.tempdir)
-        self.assertTrue(self.pubgdb.replace(self.localgdb.zipped))
+        self.localpub.zip(self.tempdir)
+        self.assertTrue(self.pubgdb.replace(self.localpub.zipped))
         
-        self.localgdb.clean()
-        self.assertFalse(os.path.isfile(self.localgdb.zipped))
-        self.assertFalse(os.path.isdir(self.localgdb.renamed))
+        self.localpub.clean()
+        self.assertFalse(os.path.isfile(self.localpub.zipped))
+        self.assertFalse(os.path.isdir(self.localpub.renamed))
 
         self.assertTrue(big > small)
 
@@ -167,13 +179,13 @@ class PublishTestCase(unittest.TestCase):
         self.assertFalse(os.path.isfile(self.pubgdb.zipped))
 
         # zip up emptygdb and publish it
-        self.emptydiffnamelocalgdb.renamezip(self.tempdir
-                                            ,'sample.gdb')
-        self.assertTrue(self.pubgdb.replace(self.emptydiffnamelocalgdb.zipped))
+        self.emptydiffnamelocalpub.renamezip(self.tempdir
+                            ,'sample.gdb')
+        self.assertTrue(self.pubgdb.replace(self.emptydiffnamelocalpub.zipped))
         
-        self.emptydiffnamelocalgdb.clean()
-        self.assertFalse(os.path.isfile(self.emptydiffnamelocalgdb.zipped))
-        self.assertFalse(os.path.isfile(self.emptydiffnamelocalgdb.renamed))
+        self.emptydiffnamelocalpub.clean()
+        self.assertFalse(os.path.isfile(self.emptydiffnamelocalpub.zipped))
+        self.assertFalse(os.path.isfile(self.emptydiffnamelocalpub.renamed))
 
         # download empty samplegdb.zip and get its size
         self.pubgdb.download(self.tempdir)
@@ -181,34 +193,34 @@ class PublishTestCase(unittest.TestCase):
                                             ,'sample.gdb.zip'))
         
         self.pubgdb.clean()
-        self.assertFalse(os.path.isfile(self.emptylocalgdb.zipped))
+        self.assertFalse(os.path.isfile(self.emptylocalpub.zipped))
 
         # re-publish the original non-empty samplegdb.zip
-        self.localgdb.zip(self.tempdir)
-        self.assertTrue(self.pubgdb.replace(self.localgdb.zipped))
+        self.localpub.zip(self.tempdir)
+        self.assertTrue(self.pubgdb.replace(self.localpub.zipped))
         
-        self.localgdb.clean()
-        self.assertFalse(os.path.isfile(self.localgdb.zipped))
+        self.localpub.clean()
+        self.assertFalse(os.path.isfile(self.localpub.zipped))
 
         self.assertTrue(big > small)
 
     def test_hzipnesting(self):
         
-        self.localgdb.renamezip(self.tempdir
-                               ,'renamesample.gdb')
+        self.localpub.renamezip(self.tempdir
+                       ,'renamesample.gdb')
 
-        self.assertTrue(os.path.isfile(self.localgdb.zipped))
+        self.assertTrue(os.path.isfile(self.localpub.zipped))
 
-        self.localgdb.unzip(self.tempdir)
-        self.assertTrue(os.path.isdir(self.localgdb.unzipped))
+        self.localpub.unzip(self.tempdir)
+        self.assertTrue(os.path.isdir(self.localpub.unzipped))
 
         self.assertTrue(os.path.isdir(os.path.join(self.tempdir
                                                   ,'renamesample.gdb')))
 
-        self.localgdb.clean()
-        self.assertFalse(os.path.isfile(self.localgdb.zipped))
-        self.assertFalse(os.path.isdir(self.localgdb.renamed))
-        self.assertFalse(os.path.isdir(self.localgdb.unzipped))
+        self.localpub.clean()
+        self.assertFalse(os.path.isfile(self.localpub.zipped))
+        self.assertFalse(os.path.isdir(self.localpub.renamed))
+        self.assertFalse(os.path.isdir(self.localpub.unzipped))
 
         # this is the test that the nesting and cleanup are good
         # unzip should not leave a000001.freelist a00001.gdbindexes etc
@@ -218,21 +230,21 @@ class PublishTestCase(unittest.TestCase):
     def test_irenamezipfail(self):
 
         with self.assertRaises(FileNotFoundError) as context:
-            self.nonexistentlocalgdb.renamezip(self.tempdir
+            self.nonexistentlocalpub.renamezip(self.tempdir
                                               ,'renamesample.gdb')
         self.assertTrue(str(context.exception).startswith, "File not found")
 
     def test_jrenamezipwithlocks(self):
 
-        self.localgdbwithlocks.renamezip(self.tempdir
-                                        ,'renamesamplewithlocks.gdb')
+        self.localpubwithlocks.renamezip(self.tempdir
+                        ,'renamesamplewithlocks.gdb')
 
-        self.assertTrue(os.path.isfile(self.localgdbwithlocks.zipped))
-        self.assertIs(self.localgdbwithlocks.has_locks(), False)
+        self.assertTrue(os.path.isfile(self.localpubwithlocks.zipped))
+        self.assertIs(self.localpubwithlocks.has_locks(), False)
 
-        self.localgdbwithlocks.clean()
-        self.assertFalse(os.path.isfile(self.localgdbwithlocks.zipped))
-        self.assertFalse(os.path.isdir(self.localgdbwithlocks.renamed))
+        self.localpubwithlocks.clean()
+        self.assertFalse(os.path.isfile(self.localpubwithlocks.zipped))
+        self.assertFalse(os.path.isdir(self.localpubwithlocks.renamed))
         self.assertTrue(not any(Path(self.tempdir).iterdir()))
 
 
