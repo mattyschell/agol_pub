@@ -72,9 +72,22 @@ def main():
         filepub.renamezip(args.tempdir
                          ,args.targetgdbname)
         retval = 0
-    except Exception as e:
+    except publisher.LockFilesPresentError as e:
+        logging.error('Lock-file failure calling renamezip for {0}'.format(
+            filegdb.gdb))
+        logging.error('{0}'.format(e))
+        retval = 1
+    except (publisher.PublishWorkflowError
+           ,FileNotFoundError
+           ,PermissionError
+           ,OSError) as e:
         logging.error('Failure calling renamezip for {0}'.format(filegdb.gdb))
-        logging.error('The error is {0}'.format(e))
+        logging.exception(e)
+        retval = 1
+    except Exception as e:
+        logging.error('Unexpected renamezip failure for {0}'.format(
+            filegdb.gdb))
+        logging.exception(e)
         retval = 1
                         
     if retval == 0:
@@ -92,16 +105,17 @@ def main():
                     'Failure, ArcGIS API returned false replacing {0}'.format(
                         args.targetgdbname))
                 retval = 1
-        except:
+        except Exception as e:
             logging.error('Failure replacing {0}'.format(args.targetgdbname))
+            logging.exception(e)
             retval = 1
         
         try:
             filepub.clean()
-        except:
+        except OSError as e:
             # https://github.com/mattyschell/agol-pub/issues/4
-            # shame 
-            pass
+            # shame
+            logging.warning('Cleanup failure: {0}'.format(e))
     
     sys.exit(retval)
 
