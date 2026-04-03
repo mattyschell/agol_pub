@@ -53,9 +53,33 @@ options:
   -h, --help  show this help message and exit
 ```
 
+## Hosted Feature Layer Operations
+
+Use `replace-hfl.py` for hosted feature layer operations.
+
+```
+usage: replace-hfl.py [-h] {overwrite,swap-view} ...
+
+positional arguments:
+  {overwrite,swap-view}
+    overwrite           Overwrite a hosted feature layer with a local CSV
+    swap-view           Call FeatureLayerCollection.manager.swap_view()
+
+options:
+  -h, --help            show this help message and exit
+```
+
+Examples:
+
+```shell
+C:\gis\agol-pub>python replace-hfl.py overwrite <itemid> D:\data\points.csv
+C:\gis\agol-pub>python replace-hfl.py swap-view <itemid> 0 <new_source>
+C:\gis\agol-pub>python replace-hfl.py swap-view <itemid> 0 <new_source> --source-index 1
+```
+
 ## Test The Code In This Repository
 
-See individual src\py\test-* test cases for sample uses. To run all tests update the environmentals in testall.bat and call it.  The tests expect a dummy item to exist in the NYCMaps ArcGIS Online organization.
+See individual src\py\test-* test cases for sample uses. To run all tests update the environmentals in testall.bat and call it.  Some tests are mocked.  But we are not that fancy so some tests expect a dummy item to exist in the NYCMaps ArcGIS Online organization. 
 
 ```shell
 C:\gis\agol-pub>testall.bat

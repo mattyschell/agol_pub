@@ -3,6 +3,11 @@ import stat
 import shutil
 from pathlib import Path
 
+try:
+    from arcgis.features import FeatureLayerCollection
+except ImportError:
+    FeatureLayerCollection = None
+
 # we may manage several types of content
 # simple first case: a local gdb published to an item 
 #                    on the nycmaps organization 
@@ -13,6 +18,14 @@ class PublishWorkflowError(Exception):
 
 
 class LockFilesPresentError(PublishWorkflowError):
+    pass
+
+
+class HostedFeatureLayerOverwriteError(PublishWorkflowError):
+    pass
+
+
+class HostedFeatureLayerSwapViewError(PublishWorkflowError):
     pass
 
 class PublishedItem(object):
@@ -68,6 +81,104 @@ class LocalGeodatabase(object):
         self.gdb  = filegdb
         self.gdbname = os.path.basename(self.gdb)
         self.gdbpath = os.path.dirname(self.gdb)
+
+
+class LocalCsv(object):
+
+    def __init__(self
+                ,filecsv):
+
+        self.csv = filecsv
+        self.csvname = os.path.basename(self.csv)
+        self.csvpath = os.path.dirname(self.csv)
+
+        if not self.csv.lower().endswith('.csv'):
+            raise ValueError('Expected a .csv file, got {0}'.format(self.csv))
+
+        if not os.path.isfile(self.csv):
+            raise FileNotFoundError('CSV file not found: {0}'.format(self.csv))
+
+
+class HostedFeatureLayerPublisher(object):
+
+    def __init__(self
+                ,org
+                ,id
+                ,csvinput=None):
+
+        if FeatureLayerCollection is None:
+            raise ImportError(
+                'Failed to import arcgis.features.FeatureLayerCollection')
+
+        self.item = PublishedItem(org
+                                 ,id)
+
+        self.localcsv = None
+        if csvinput is not None:
+            if isinstance(csvinput, LocalCsv):
+                self.localcsv = csvinput
+            else:
+                self.localcsv = LocalCsv(csvinput)
+
+        self.feature_layer_collection = FeatureLayerCollection.fromitem(
+            self.item.existingitem)
+
+        if self.feature_layer_collection is None:
+            raise ValueError(
+                'Item {0} is not a hosted feature layer collection'.format(id))
+
+    def overwrite(self):
+
+        if self.localcsv is None:
+            raise ValueError('CSV input is required for overwrite()')
+
+        try:
+            return self.feature_layer_collection.manager.overwrite(
+                self.localcsv.csv)
+        except Exception as e:
+            raise HostedFeatureLayerOverwriteError(
+                'Failed to overwrite hosted feature layer {0} with {1}'.format(
+                    self.item.id
+                   ,self.localcsv.csv)) from e
+
+    def _resolve_source_layer(self
+                             ,new_source_id
+                             ,source_index=0):
+
+        source_item = PublishedItem(self.item.org
+                                   ,new_source_id)
+        source_layers = getattr(source_item.existingitem
+                               ,'layers'
+                               ,None)
+
+        if not source_layers:
+            raise ValueError(
+                'Item {0} does not expose any feature layers'.format(
+                    new_source_id))
+
+        try:
+            return source_layers[int(source_index)]
+        except (IndexError, TypeError, ValueError) as e:
+            raise ValueError(
+                'Unable to resolve source layer index {0} for item {1}'.format(
+                    source_index
+                   ,new_source_id)) from e
+
+    def swap_view(self
+                 ,index
+                 ,new_source
+                 ,source_index=0):
+
+        source_layer = self._resolve_source_layer(new_source
+                                                 ,source_index)
+
+        try:
+            return self.feature_layer_collection.manager.swap_view(int(index)
+                                                                  ,source_layer)
+        except Exception as e:
+            raise HostedFeatureLayerSwapViewError(
+                'Failed to swap view for hosted feature layer {0}'.format(
+                    self.item.id)) from e
 
 
 class PublishWorkflow(object):
