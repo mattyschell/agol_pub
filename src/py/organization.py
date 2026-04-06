@@ -10,8 +10,8 @@ import os
 class Organization(object):
 
     def __init__(self
-                ,user 
-                ,creds
+                ,user=None
+                ,creds=None
                 ,url="https://nyc.maps.arcgis.com/"
                 ,gis=None):
 
@@ -27,14 +27,81 @@ class Organization(object):
             }
 
         if gis is not None:
+            # development.
+            # We passed in a gis, likely gis("pro") 
+            # ArcGIS Pro is open and authenticated at runtime
             self.gis = gis
+            self.user = self._get_gis_user(gis)
+            self.creds = None
+            self.url = getattr(gis
+                              ,'url'
+                              ,url)
         else:
+            # production. a user with password
             self.gis = GIS(url
                           ,user
                           ,creds
                           ,proxy=self.proxy)
-        
-        self.token = self.gis.session.auth.token
+
+        self.token = self._get_gis_token(self.gis)
+
+    def _get_gis_user(self
+                     ,gis):
+
+        gis_user = getattr(getattr(gis
+                                  ,'users'
+                                  ,None)
+                          ,'me'
+                          ,None)
+
+        if gis_user is not None:
+            username = getattr(gis_user
+                              ,'username'
+                              ,None)
+            if username is not None:
+                return username
+
+        properties = getattr(gis
+                            ,'properties'
+                            ,None)
+        property_user = getattr(properties
+                               ,'user'
+                               ,None)
+
+        if property_user is not None:
+            return getattr(property_user
+                          ,'username'
+                          ,None)
+
+        return None
+
+    def _get_gis_token(self
+                      ,gis):
+
+        session = getattr(gis
+                         ,'session'
+                         ,None)
+        auth = getattr(session
+                      ,'auth'
+                      ,None)
+        token = getattr(auth
+                       ,'token'
+                       ,None)
+
+        if token is not None:
+            return token
+
+        connection = getattr(gis
+                            ,'_con'
+                            ,None)
+        token = getattr(connection
+                       ,'token'
+                       ,None)
+
+        if token is not None:
+            return token
+
+        return None
 
     def describe(self):
     

@@ -6,4 +6,4 @@ scratch/
 
 *local*.bat
 geodatabase-scripts/*.bat
-geodatabase-scripts/!sample*.bat
+!geodatabase-scripts/sample*.bat

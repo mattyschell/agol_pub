@@ -1,5 +1,5 @@
 # calling bat must
-# set AGOLPUB=D:\gis\agol-pub\src\py
+# set AGOLPUB=D:\gis\agol_pub\src\py
 # set PYTHONPATH=%PYTHONPATH%;%AGOLPUB%
 # set NYCMAPSUSER=xxxx.xxx.xxx
 # set NYCMAPSCREDS=xxxxxx
@@ -36,7 +36,7 @@ def main():
     try:
 
         org = organization.Organization(os.environ['NYCMAPSUSER']
-                           ,os.environ['NYCMAPCREDS'])
+                           ,os.environ['NYCMAPSCREDS'])
         filegdb = publisher.LocalGeodatabase(args.srcgdb)
         filepub = publisher.PublishWorkflow(filegdb)
     
@@ -113,7 +113,7 @@ def main():
         try:
             filepub.clean()
         except OSError as e:
-            # https://github.com/mattyschell/agol-pub/issues/4
+            # https://github.com/mattyschell/agol_pub/issues/4
             # shame
             logging.warning('Cleanup failure: {0}'.format(e))
     

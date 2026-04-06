@@ -5,8 +5,47 @@ from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+from arcgis.gis import GIS
 import organization
 import publisher
+
+
+def _get_proxy_config():
+
+    if 'PROXY' not in os.environ:
+        return None
+
+    return {
+        'http': os.environ['PROXY']
+       ,'https': os.environ['PROXY']
+    }
+
+
+def _connect_pro_gis():
+
+    proxy = _get_proxy_config()
+    if proxy is None:
+        return GIS("pro")
+
+    return GIS("pro"
+              ,proxy=proxy)
+
+
+def _print_pro_auth_context(gis):
+
+    portal = getattr(gis.properties
+                    ,'portalName'
+                    ,getattr(gis
+                            ,'url'
+                            ,'unknown-portal'))
+    user_obj = getattr(gis.users
+                      ,'me'
+                      ,None)
+    user = getattr(user_obj
+                  ,'username'
+                  ,'unknown-user')
+    print('GIS("pro") authenticated as {0} on {1}'.format(user
+                                                           ,portal))
 
 class PublishTestCase(unittest.TestCase):
 
@@ -17,16 +56,27 @@ class PublishTestCase(unittest.TestCase):
         # we could write a creation method
         # but doubtful we will ever create items from code
         self.testitemid = "a8d31a8f63b74b5f893cc675ea7419f0"
+        self.tempdirctx = tempfile.TemporaryDirectory()
+        self.tempdir = Path(self.tempdirctx.name)
 
-        self.testuser  = os.environ['NYCMAPSUSER']
-        self.testcreds = os.environ['NYCMAPCREDS']
-        self.tempdir = Path(os.environ['TEMP'])
-        
-        self.org = organization.Organization(self.testuser
-                            ,self.testcreds)
+        if 'NYCMAPSUSER' in os.environ and 'NYCMAPSCREDS' in os.environ:
+            self.testuser  = os.environ['NYCMAPSUSER']
+            self.testcreds = os.environ['NYCMAPSCREDS']
+            self.org = organization.Organization(self.testuser
+                                ,self.testcreds)
+        else:
+            try:
+                gis = _connect_pro_gis()
+                _print_pro_auth_context(gis)
+                self.org = organization.Organization(gis=gis)
+            except Exception as e:
+                raise unittest.SkipTest(
+                    'Unable to authenticate with GIS("pro"). '
+                    'Open ArcGIS Pro, sign in, and verify network/proxy. '
+                    'Original error: {0}'.format(e))
         
         self.pubgdb = publisher.PublishedItem(self.org
-                             ,self.testitemid)
+                                             ,self.testitemid)
 
         self.testdatadir = os.path.join(os.path.dirname(os.path.abspath(__file__))
                                        ,'testdata')
@@ -75,7 +125,7 @@ class PublishTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(self):
-        pass
+        self.tempdirctx.cleanup()
 
     def test_adescribe(self):
 
@@ -96,7 +146,7 @@ class PublishTestCase(unittest.TestCase):
     def test_clocalgdbrenamezip(self):
 
         self.localpub.renamezip(self.tempdir
-                       ,'renamesample.gdb')
+                               ,'renamesample.gdb')
 
         self.assertTrue(os.path.isfile(self.localpub.zipped))
 

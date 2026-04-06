@@ -149,7 +149,7 @@ def main():
     qalogger = qalogging(targetlog)
 
     org = organization.Organization(os.environ['NYCMAPSUSER']
-                                   ,os.environ['NYCMAPCREDS'])
+                                   ,os.environ['NYCMAPSCREDS'])
         
     pubgdb = publisher.PublishedItem(org
                                     ,args.pitemid)
