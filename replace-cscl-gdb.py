@@ -35,8 +35,7 @@ def main():
 
     try:
 
-        org = organization.Organization(os.environ['NYCMAPSUSER']
-                           ,os.environ['NYCMAPSCREDS'])
+        org = organization.Organization.from_env()
         filegdb = publisher.LocalGeodatabase(args.srcgdb)
         filepub = publisher.PublishWorkflow(filegdb)
     

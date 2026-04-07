@@ -148,9 +148,8 @@ def main():
     
     qalogger = qalogging(targetlog)
 
-    org = organization.Organization(os.environ['NYCMAPSUSER']
-                                   ,os.environ['NYCMAPSCREDS'])
-        
+    org = organization.Organization.from_env()
+
     pubgdb = publisher.PublishedItem(org
                                     ,args.pitemid)
     # D:\temp\cscl.gdb.zip

@@ -5,30 +5,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-from arcgis.gis import GIS
 import organization
 import publisher
-
-
-def _get_proxy_config():
-
-    if 'PROXY' not in os.environ:
-        return None
-
-    return {
-        'http': os.environ['PROXY']
-       ,'https': os.environ['PROXY']
-    }
-
-
-def _connect_pro_gis():
-
-    proxy = _get_proxy_config()
-    if proxy is None:
-        return GIS("pro")
-
-    return GIS("pro"
-              ,proxy=proxy)
 
 
 def _print_pro_auth_context(gis):
@@ -59,21 +37,15 @@ class PublishTestCase(unittest.TestCase):
         self.tempdirctx = tempfile.TemporaryDirectory()
         self.tempdir = Path(self.tempdirctx.name)
 
-        if 'NYCMAPSUSER' in os.environ and 'NYCMAPSCREDS' in os.environ:
-            self.testuser  = os.environ['NYCMAPSUSER']
-            self.testcreds = os.environ['NYCMAPSCREDS']
-            self.org = organization.Organization(self.testuser
-                                ,self.testcreds)
-        else:
-            try:
-                gis = _connect_pro_gis()
-                _print_pro_auth_context(gis)
-                self.org = organization.Organization(gis=gis)
-            except Exception as e:
-                raise unittest.SkipTest(
-                    'Unable to authenticate with GIS("pro"). '
-                    'Open ArcGIS Pro, sign in, and verify network/proxy. '
-                    'Original error: {0}'.format(e))
+        try:
+            self.org = organization.Organization.from_env()
+            if 'NYCMAPSUSER' not in os.environ:
+                _print_pro_auth_context(self.org.gis)
+        except Exception as e:
+            raise unittest.SkipTest(
+                'Unable to authenticate. '
+                'Open ArcGIS Pro, sign in, and verify network/proxy. '
+                'Original error: {0}'.format(e))
         
         self.pubgdb = publisher.PublishedItem(self.org
                                              ,self.testitemid)

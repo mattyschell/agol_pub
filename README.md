@@ -8,8 +8,17 @@ We will lovingly wrap [these wrappers](https://developers.arcgis.com/python/late
 ## Requirements
 
 1. ArcGIS Pro installed (ie python _import_ _arcgis_)
-2. For most production uses a user (`NYCMAPSUSER`) and credentials (`NYCMAPSCREDS`) for the nycmaps arcgis online organization
+2. Authentication — scripts use whichever of these is available:
+   - `NYCMAPSUSER` + `NYCMAPSCREDS` environment variables (service account / unattended)
+   - ArcGIS Pro open and signed in — used automatically when the variables above are not set
 3. QA requires _import_ _arcpy_
+
+Optional environment variables used by all scripts:
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `PROXY` | HTTP/HTTPS proxy, e.g. `http://host:port` | none |
+| `TARGETLOGDIR` | Directory for log files | system temp |
 
 ## Replace a File Geodatabase
 

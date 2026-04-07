@@ -6,6 +6,6 @@ if exist "%PYTHON1%" (
 ) else if exist "%PYTHON2%" (
     set PROPY=%PYTHON2%
 ) 
-REM "-W ignore" suppresses deprecation warnings arcgis
+REM "-W ignore" suppresses deprecation warnings from arcgis
 CALL %PROPY% -W ignore .\src\py\test-organization.py
 CALL %PROPY% -W ignore .\src\py\test-publisher.py

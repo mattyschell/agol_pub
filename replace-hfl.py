@@ -25,15 +25,6 @@ def _result_ok(result):
     return True
 
 
-def _organization_from_env():
-
-    try:
-        return organization.Organization(os.environ['NYCMAPSUSER']
-                                        ,os.environ['NYCMAPSCREDS'])
-    except KeyError as e:
-        raise ValueError('Missing required environment variable {0}'.format(e))
-
-
 def main():
 
     parser = argparse.ArgumentParser(
@@ -93,7 +84,7 @@ def main():
 
         logging.info('organization setup starting itemid={0}'.format(
             args.itemid))
-        org = _organization_from_env()
+        org = organization.Organization.from_env()
         logging.info('organization setup completed itemid={0}'.format(
             args.itemid))
 
