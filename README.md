@@ -72,9 +72,11 @@ options:
 Examples:
 
 ```shell
-C:\gis\agol_pub>python replace-hfl.py overwrite <itemid> D:\data\points.csv
-C:\gis\agol_pub>python replace-hfl.py swap-view <itemid> 0 <new_source>
-C:\gis\agol_pub>python replace-hfl.py swap-view <itemid> 0 <new_source> --source-index 1
+>python replace-hfl.py overwrite <itemid> D:\data\points.csv
+> rem in both cases below 0 is view index
+>python replace-hfl.py swap-view <itemid> 0 <new_source>
+> rem rare signature with source index greater than 0
+>python replace-hfl.py swap-view <itemid> 0 <new_source> --source-index 1
 ```
 
 ## Test The Code In This Repository
