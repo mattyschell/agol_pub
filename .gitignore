@@ -7,3 +7,5 @@ scratch/
 *local*.bat
 geodatabase-scripts/*.bat
 !geodatabase-scripts/sample*.bat
+
+*.log
