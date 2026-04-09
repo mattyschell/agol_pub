@@ -31,7 +31,7 @@ The SQL above generates the csvs in this directory. Borough_pt_green.csv has bee
     borough_pt_bk_vw 
 
 
-## The manual integration test as stiched together python calls
+## The manual integration test as stitched together python calls
 
 1. Open and authenticate ArcGIS Pro
 
