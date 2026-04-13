@@ -88,6 +88,10 @@ Examples:
 >python replace-hfl.py swap-view <itemid> 0 <new_source> --source-index 1
 ```
 
+### Hosted Feature Layer Sample Scripts
+
+See geodatabase-scripts\sample-bluegreen.bat
+
 ## Test The Code In This Repository
 
 #### Run tests with your single signon user

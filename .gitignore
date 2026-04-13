@@ -9,3 +9,4 @@ geodatabase-scripts/*.bat
 !geodatabase-scripts/sample*.bat
 
 *.log
+state-*.json
