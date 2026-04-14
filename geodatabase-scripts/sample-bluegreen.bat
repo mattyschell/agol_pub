@@ -22,7 +22,8 @@ if exist "%PYTHON1%" (
     set PROPY=%PYTHON2%
 ) 
 set AGOLPUB=%BASEPATH%\agol_pub
-set STATEFILE=%AGOLPUB%\geodatabase-scripts\state-%VIEWITEMID%.json
+REM assumes manual creation of geodatabase-scripts\statefiles\
+set STATEFILE=%AGOLPUB%\geodatabase-scripts\statefiles\state-%VIEWITEMID%.json
 set TARGET_COLOR=
 REM Get target (will be "green" or "blue")
 for /f "tokens=*" %%A in (

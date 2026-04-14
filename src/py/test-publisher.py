@@ -551,6 +551,45 @@ class HostedFeatureLayerPublisherTestCase(unittest.TestCase):
 
     @patch('publisher.FeatureLayerCollection')
     @patch('publisher.PublishedItem')
+    def test_swap_view_missing_manager_method(self
+                                             ,mock_published_item
+                                             ,mock_flc):
+
+        existing = MagicMock()
+        source_layer = MagicMock()
+        source_existing = MagicMock()
+        source_existing.layers = [source_layer]
+
+        view_item = MagicMock()
+        view_item.existingitem = existing
+        view_item.id = 'view123'
+
+        source_item = MagicMock()
+        source_item.existingitem = source_existing
+        source_item.id = 'source123'
+
+        mock_published_item.side_effect = [view_item, source_item]
+
+        manager = MagicMock(spec=[])
+
+        flc_obj = MagicMock()
+        flc_obj.manager = manager
+        mock_flc.fromitem.return_value = flc_obj
+
+        viewpub = publisher.HostedFeatureLayerPublisher(MagicMock()
+                                                       ,'view123')
+
+        with self.assertRaises(publisher.HostedFeatureLayerSwapViewError) as cm:
+            viewpub.swap_view('0'
+                             ,'source123')
+
+        self.assertIsInstance(cm.exception.__cause__
+                             ,AttributeError)
+        self.assertIn('not available'
+                     ,str(cm.exception))
+
+    @patch('publisher.FeatureLayerCollection')
+    @patch('publisher.PublishedItem')
     def test_swap_view_wraps_error(self
                                   ,mock_published_item
                                   ,mock_flc):

@@ -7,7 +7,7 @@ We will lovingly wrap [these wrappers](https://developers.arcgis.com/python/late
 
 ## Requirements
 
-1. ArcGIS Pro installed (ie python _import_ _arcgis_)
+1. ArcGIS Pro 3.5+ installed (ie python _import_ _arcgis_)
 2. Authentication — scripts use whichever of these is available:
    - `NYCMAPSUSER` + `NYCMAPSCREDS` environment variables (service account / unattended)
    - ArcGIS Pro open and signed in — used automatically when the variables above are not set

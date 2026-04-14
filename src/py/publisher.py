@@ -173,8 +173,17 @@ class HostedFeatureLayerPublisher(object):
                                                  ,source_index)
 
         try:
-            return self.feature_layer_collection.manager.swap_view(int(index)
-                                                                  ,source_layer)
+            swap_view_method = self.feature_layer_collection.manager.swap_view
+        except AttributeError as e:
+            raise HostedFeatureLayerSwapViewError(
+                'swap_view is not available in this ArcGIS API environment '
+                'for hosted feature layer {0}. '
+                'Upgrade ArcGIS Pro/arcgis API or use a REST swapView '
+                'fallback.'.format(self.item.id)) from e
+
+        try:
+            return swap_view_method(int(index)
+                                   ,source_layer)
         except Exception as e:
             raise HostedFeatureLayerSwapViewError(
                 'Failed to swap view for hosted feature layer {0}'.format(
