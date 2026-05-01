@@ -11,7 +11,6 @@ We will lovingly wrap [these wrappers](https://developers.arcgis.com/python/late
 2. Authentication — scripts use whichever of these is available:
    - `NYCMAPSUSER` + `NYCMAPSCREDS` environment variables (service account / unattended)
    - ArcGIS Pro open and signed in — used automatically when the variables above are not set
-3. QA requires _import_ _arcpy_
 
 Optional environment variables used by all scripts:
 
@@ -19,48 +18,6 @@ Optional environment variables used by all scripts:
 |---|---|---|
 | `PROXY` | HTTP/HTTPS proxy, e.g. `http://host:port` | none |
 | `TARGETLOGDIR` | Directory for log files | system temp |
-
-## Replace a File Geodatabase
-
-Copy geodatabase-scripts\sample-replace-cscl-gdb.bat out to a scripts directory, rename it, and update the environmentals.
-
-```shell
-C:\gis\geodatabase-scripts>sample-replace-cscl-gdb.bat
-``` 
-
-#### Replace file geodatabase python script
-
-```
-usage: replace-cscl-gdb.py [-h] srcgdb targetgdbname targetitemid tempdir
-
-Replace a file geodatabase in ArcGIS Online
-
-positional arguments:
-  srcgdb         Local file geodatabase
-  targetgdbname  File geodatabase name in ArcGIS Online
-  targetitemid   Item id in ArcGIS Online
-  tempdir        A local temp directory
-
-options:
-  -h, --help     show this help message and exit
-```
-
-#### QA file geodatabase python script
-
-```
-usage: replace-cscl-qa.py [-h] pitemid pgdbname ptempdir pzipmb
-
-QA a file geodatabase in ArcGIS Online
-
-positional arguments:
-  pitemid     Item id in ArcGIS Online
-  pgdbname    File geodatabase name
-  ptempdir    A local temp directory
-  pzipmb      Expected geodatabase MB zipped
-
-options:
-  -h, --help  show this help message and exit
-```
 
 ## Hosted Feature Layer Operations
 
