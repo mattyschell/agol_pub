@@ -46,59 +46,85 @@ def getspecialcontent(notification
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        print('notify.py - Usage: notify.py "subject" recipients logtype '
+              '[checklogfor]')
+        sys.exit(2)
 
-    notification    = sys.argv[1]
-    pemails         = sys.argv[2]
-    plogtype        = sys.argv[3] # ex 'qa' 'export' '*' (latest)
-    
+    notification = sys.argv[1]
+    pemails = sys.argv[2]
+    plogtype = sys.argv[3]  # ex 'qa' 'export' '*' (latest)
+
     if len(sys.argv) == 4:
         pchecklogfor = 'nothing'
     else:
-        # pass in ERROR for example
-        # to only notify if ERROR appears in the log
+        # pass in ERROR for example to only notify if ERROR appears in log
         pchecklogfor = sys.argv[4]
 
-    logdir          = os.environ['TARGETLOGDIR']
-    emailfrom       = os.environ['NOTIFYFROM']
-    smtpfrom        = os.environ['SMTPFROM']
+    logdir = os.environ['TARGETLOGDIR']
+    emailfrom = os.environ['NOTIFYFROM']
+    smtpfrom = os.environ['SMTPFROM']
 
     msg = EmailMessage()
 
     # notification is like "importing buildings onto dev.sde"
-
     msg['Subject'] = '{0}'.format(notification)
 
-    content  = '{0}{1}'.format(notification
-                               ,os.linesep)
+    content = '{0}{1}'.format(notification
+                             ,os.linesep)
 
     content += 'at {0} {1}'.format(datetime.datetime.now()
                                   ,os.linesep)
-    
-    if not 'fail' in notification.lower():
+
+    if 'fail' not in notification.lower():
         content += '{0}{1}'.format(getspecialcontent(notification)
                                   ,os.linesep)
 
-    content += os.linesep + getlogfile(logdir
-                                      ,plogtype)   
-    
-    msg.set_content(content)    
+    try:
+        content += os.linesep + getlogfile(logdir
+                                          ,plogtype)
+    except ValueError:
+        print('notify.py - No logs found for type "{0}" in {1}'.format(
+            plogtype
+           ,logdir))
+        sys.exit(1)
+    except OSError as e:
+        print('notify.py - Failed to read log content: {0}'.format(e))
+        sys.exit(1)
+
+    msg.set_content(content)
     msg['From'] = emailfrom
 
-    # this is headers only 
-    # if a string is passed to sendmail it is treated as a list with one element!
+    # this is headers only
+    # if a string is passed to sendmail it is treated as one recipient
     msg['To'] = pemails
 
-    if  (pchecklogfor != 'nothing' and pchecklogfor in content) \
-    or   pchecklogfor == 'nothing':
-        
+    should_send = (
+        (pchecklogfor != 'nothing' and pchecklogfor in content)
+        or pchecklogfor == 'nothing'
+    )
+
+    if not should_send:
+        print('notify.py - Email skipped, "{0}" not found in content'.format(
+            pchecklogfor))
+        sys.exit(0)
+
+    smtp = None
+
+    try:
         smtp = smtplib.SMTP(smtpfrom)
-
-        try:
-            smtp.sendmail(msg['From']
-                         ,msg['To'].split(",")
-                         ,msg.as_string())
-        except smtplib.SMTPRecipientsRefused as e:
-            print("\n notify.py - Email not sent: relaying denied.")
-            print(" notify.py - This is expected from desktop environments.\n")
-
-        smtp.quit()
+        smtp.sendmail(msg['From']
+                     ,msg['To'].split(",")
+                     ,msg.as_string())
+    except smtplib.SMTPRecipientsRefused:
+        print('notify.py - Email not sent: recipients refused (relay denied).')
+        sys.exit(1)
+    except (smtplib.SMTPException, OSError) as e:
+        print('notify.py - Email not sent: {0}'.format(e))
+        sys.exit(1)
+    finally:
+        if smtp is not None:
+            try:
+                smtp.quit()
+            except OSError:
+                pass
