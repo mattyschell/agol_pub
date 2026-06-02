@@ -147,11 +147,11 @@ class GroupReporterTestCase(unittest.TestCase):
         report = reporter.group_members_report('group-123')
         text = reporter.report_text(report)
 
-        self.assertIn('username\tuser.fullName\tuser.email'
+        self.assertIn('username,user.fullName,user.email'
                      ,text)
-        self.assertIn('owner.user\tOwner User\towner@example.com'
+        self.assertIn('owner.user,Owner User,owner@example.com'
                      ,text)
-        self.assertIn('missing.user\t\t\t\t\tmember'
+        self.assertIn('missing.user,,,,,member'
                      ,text)
 
     def test_write_report_text_writes_file(self):
@@ -172,9 +172,9 @@ class GroupReporterTestCase(unittest.TestCase):
                      ,encoding='utf-8') as f:
                 text = f.read()
 
-        self.assertIn('user.lastLogin\tgroup_role\n'
+        self.assertIn('user.lastLogin,group_role\n'
                      ,text)
-        self.assertIn('missing.user\t\t\t\t\tmember\n'
+        self.assertIn('missing.user,,,,,member\n'
                      ,text)
 
 if __name__ == '__main__':

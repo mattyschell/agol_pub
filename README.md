@@ -51,16 +51,17 @@ See geodatabase-scripts\sample-bluegreen.bat
 
 ## Group Membership Report
 
-Use `group-members-report.py` to export group member details to a text file (tab-delimited). See also geodatabase-scripts\sample-group-report.bat.
+Use `group-members-report.py` to export group member details to a CSV
+file (comma-delimited). See also geodatabase-scripts\sample-group-report.bat.
 
 ```
 usage: group-members-report.py [-h] [--url URL] groupid outfile
 
-Write an ArcGIS Online group membership report to text
+Write an ArcGIS Online group membership report to CSV
 
 positional arguments:
   groupid     ArcGIS Online group id
-  outfile     Output text file path
+  outfile     Output CSV file path
 
 options:
   -h, --help  show this help message and exit
@@ -70,7 +71,7 @@ options:
 Example:
 
 ```shell
->python group-members-report.py <groupid> D:\reports\group-members.txt
+>python group_members_report.py <groupid> D:\reports\group-members.csv
 ```
 
 ## Test The Code In This Repository
