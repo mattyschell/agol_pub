@@ -3,6 +3,8 @@ try:
 except ImportError as e: 
     raise ImportError("Failed to import arcgis. Check that you are calling from ArcGIS Pro python") from e
 
+import csv
+import io
 import os
 from datetime import datetime
 from datetime import timezone
@@ -12,12 +14,22 @@ from datetime import timezone
 
 def _proxy_from_env():
 
-    if 'PROXY' not in os.environ:
+    proxy = (os.environ.get('PROXY')
+             or os.environ.get('HTTPS_PROXY')
+             or os.environ.get('HTTP_PROXY')
+             or os.environ.get('https_proxy')
+             or os.environ.get('http_proxy'))
+
+    if proxy is None:
+        return None
+
+    proxy = proxy.strip()
+    if proxy == '':
         return None
 
     return {
-        'http':  os.environ['PROXY']
-       ,'https': os.environ['PROXY']
+        'http':  proxy
+       ,'https': proxy
     }
 
 
@@ -40,6 +52,16 @@ def _normalize_last_login(last_login):
 
     return datetime.fromtimestamp(timestamp
                                  ,tz=timezone.utc).isoformat()
+
+
+def _safe_attr(obj
+              ,name):
+
+    try:
+        return getattr(obj
+                      ,name)
+    except (AttributeError, KeyError):
+        return None
 
 
 class Organization(object):
@@ -81,13 +103,30 @@ class Organization(object):
         user  = os.environ.get('NYCMAPSUSER')
         creds = os.environ.get('NYCMAPSCREDS')
 
+        if user is not None:
+            user = user.strip()
+            if user == '':
+                user = None
+
+        if creds is not None:
+            creds = creds.strip()
+            if creds == '':
+                creds = None
+
+        if creds is not None and user is None:
+            raise ValueError(
+                'NYCMAPSCREDS is set but NYCMAPSUSER is missing'
+            )
+
         if user is not None and creds is None:
             raise ValueError(
                 'NYCMAPSUSER is set but NYCMAPSCREDS is missing'
             )
 
         if user is not None:
-            return cls(user, creds, url)
+            return cls(user
+                      ,creds
+                      ,url)
 
         return cls(gis=GIS('pro', proxy=_proxy_from_env()))
 
@@ -257,27 +296,22 @@ class GroupReporter(object):
                ,'group_role': group_role
             }
 
-        full_name = getattr(user
-                           ,'fullName'
-                           ,None)
+        full_name = _safe_attr(user
+                              ,'fullName')
         if full_name is None:
-            full_name = getattr(user
-                               ,'full_name'
-                               ,None)
+            full_name = _safe_attr(user
+                                  ,'full_name')
 
         return {
             'username': username
            ,'user.fullName': full_name
-           ,'user.email': getattr(user
-                                 ,'email'
-                                 ,None)
-           ,'user.role': getattr(user
-                                ,'role'
-                                ,None)
+           ,'user.email': _safe_attr(user
+                                    ,'email')
+           ,'user.role': _safe_attr(user
+                                   ,'role')
            ,'user.lastLogin': _normalize_last_login(
-                getattr(user
-                       ,'lastLogin'
-                       ,None))
+                _safe_attr(user
+                          ,'lastLogin'))
            ,'group_role': group_role
         }
 
@@ -307,14 +341,18 @@ class GroupReporter(object):
            ,'group_role'
         ]
 
-        lines = ['\t'.join(fields)]
+        output = io.StringIO(newline='')
+        writer = csv.writer(output
+                           ,lineterminator='\n')
+
+        writer.writerow(fields)
         for row in report_rows:
-            lines.append('\t'.join(
+            writer.writerow([
                 '' if row.get(field) is None else str(row.get(field))
                 for field in fields
-            ))
+            ])
 
-        return '\n'.join(lines)
+        return output.getvalue().rstrip('\n')
 
     @classmethod
     def write_report_text(cls
