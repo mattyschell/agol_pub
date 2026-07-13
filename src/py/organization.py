@@ -284,7 +284,11 @@ class GroupReporter(object):
                    ,username
                    ,group_role):
 
-        user = self.org.gis.users.get(username)
+        user = self._get_user_for_member(username)
+        search_user = None
+
+        if user is not None:
+            search_user = self._search_user_for_member(username)
 
         if user is None:
             return {
@@ -296,24 +300,113 @@ class GroupReporter(object):
                ,'group_role': group_role
             }
 
-        full_name = _safe_attr(user
-                              ,'fullName')
-        if full_name is None:
-            full_name = _safe_attr(user
-                                  ,'full_name')
+        full_name = self._first_non_blank(
+            _safe_attr(user
+                      ,'fullName')
+           ,_safe_attr(user
+                      ,'full_name')
+           ,_safe_attr(search_user
+                      ,'fullName')
+           ,_safe_attr(search_user
+                      ,'full_name')
+        )
+
+        email = self._first_non_blank(
+            _safe_attr(user
+                      ,'email')
+           ,_safe_attr(search_user
+                      ,'email')
+        )
+
+        role = self._first_non_blank(
+            _safe_attr(user
+                      ,'role')
+           ,_safe_attr(search_user
+                      ,'role')
+        )
+
+        last_login = self._first_non_blank(
+            _safe_attr(user
+                      ,'lastLogin')
+           ,_safe_attr(search_user
+                      ,'lastLogin')
+        )
 
         return {
             'username': username
            ,'user.fullName': full_name
-           ,'user.email': _safe_attr(user
-                                    ,'email')
-           ,'user.role': _safe_attr(user
-                                   ,'role')
+             ,'user.email': email
+             ,'user.role': role
            ,'user.lastLogin': _normalize_last_login(
-                _safe_attr(user
-                          ,'lastLogin'))
+                 last_login)
            ,'group_role': group_role
         }
+
+    def _candidate_usernames(self
+                            ,username):
+
+        candidates = [username]
+
+        # Some org member payloads use an alias ending with _nyc while
+        # the user profile is keyed by the base email-style username.
+        if isinstance(username
+                     ,str) and username.endswith('_nyc'):
+            base_username = username[:-4]
+            if base_username:
+                candidates.append(base_username)
+
+        return candidates
+
+    def _get_user_for_member(self
+                            ,username):
+
+        for candidate in self._candidate_usernames(username):
+            user = self.org.gis.users.get(candidate)
+            if user is not None:
+                return user
+
+        return None
+
+    def _search_user_for_member(self
+                               ,username):
+
+        users_api = getattr(self.org.gis
+                           ,'users'
+                           ,None)
+        search_fn = getattr(users_api
+                           ,'search'
+                           ,None)
+
+        if not callable(search_fn):
+            return None
+
+        for candidate in self._candidate_usernames(username):
+            try:
+                matches = search_fn(candidate
+                                   ,10)
+            except Exception:
+                continue
+
+            for match in matches or []:
+                match_username = _safe_attr(match
+                                           ,'username')
+                if match_username == candidate:
+                    return match
+
+        return None
+
+    @staticmethod
+    def _first_non_blank(*values):
+
+        for value in values:
+            if value is None:
+                continue
+            if isinstance(value
+                         ,str) and value.strip() == '':
+                continue
+            return value
+
+        return None
 
     def group_members_report(self
                             ,group_id):

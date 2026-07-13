@@ -131,6 +131,107 @@ class GroupReporterTestCase(unittest.TestCase):
                         ,'missing.user')
         self.assertIsNone(report[3]['user.email'])
 
+    def test_group_members_report_retries_lookup_without_nyc_suffix(self):
+
+        users = {
+            'mschell@oti.nyc.gov': SimpleNamespace(
+                fullName='Matthew Schell'
+               ,email='mschell@oti.nyc.gov'
+               ,role='City Editor'
+               ,lastLogin=1714000000000)
+        }
+
+        group = SimpleNamespace(
+            get_members=lambda: {
+                'owner': 'owner.user'
+               ,'admins': []
+               ,'users': ['mschell@oti.nyc.gov_nyc']
+            }
+        )
+
+        gis = SimpleNamespace(
+            groups=SimpleNamespace(
+                get=lambda group_id: (
+                    group if group_id == 'group-123' else None))
+           ,users=SimpleNamespace(
+                get=lambda username: users.get(username))
+           ,session=SimpleNamespace(
+                auth=SimpleNamespace(token='test-token')))
+
+        org = organization.Organization(gis=gis)
+        reporter = organization.GroupReporter(org)
+
+        report = reporter.group_members_report('group-123')
+
+        self.assertEqual(report[1]['username']
+                        ,'mschell@oti.nyc.gov_nyc')
+        self.assertEqual(report[1]['user.email']
+                        ,'mschell@oti.nyc.gov')
+        self.assertEqual(report[1]['user.fullName']
+                        ,'Matthew Schell')
+
+    def test_group_members_report_enriches_partial_user_from_search(self):
+
+        users_get = {
+            'owner.user': SimpleNamespace(
+                fullName='Owner User'
+               ,email='owner@example.com'
+               ,role='org_admin'
+               ,lastLogin=1714000000000)
+           ,'test_fake_esri_user': SimpleNamespace(
+                username='test_fake_esri_user'
+               ,fullName='Test NonGovernmentEmploye'
+               ,email=None
+               ,role=None
+               ,lastLogin=None)
+        }
+
+        users_search = {
+            'test_fake_esri_user': [
+                SimpleNamespace(
+                    username='test_fake_esri_user'
+                   ,fullName='Test NonGovernmentEmploye'
+                   ,email='test_fake_esri_user@example.com'
+                   ,role='City Editor'
+                   ,lastLogin=1714000200000)
+            ]
+        }
+
+        group = SimpleNamespace(
+            get_members=lambda: {
+                'owner': 'owner.user'
+               ,'admins': []
+               ,'users': ['test_fake_esri_user']
+            }
+        )
+
+        users_api = SimpleNamespace(
+            get=lambda username: users_get.get(username)
+           ,search=lambda query, max_users=10: users_search.get(query
+                                                               ,[])
+        )
+
+        gis = SimpleNamespace(
+            groups=SimpleNamespace(
+                get=lambda group_id: (
+                    group if group_id == 'group-123' else None))
+           ,users=users_api
+           ,session=SimpleNamespace(
+                auth=SimpleNamespace(token='test-token')))
+
+        org = organization.Organization(gis=gis)
+        reporter = organization.GroupReporter(org)
+
+        report = reporter.group_members_report('group-123')
+
+        self.assertEqual(report[1]['username']
+                        ,'test_fake_esri_user')
+        self.assertEqual(report[1]['user.email']
+                        ,'test_fake_esri_user@example.com')
+        self.assertEqual(report[1]['user.role']
+                        ,'City Editor')
+        self.assertIsNotNone(report[1]['user.lastLogin'])
+
     def test_group_members_report_missing_group_raises(self):
 
         org = self._org_for_group_tests()
