@@ -21,7 +21,7 @@ def getlogfile(logdir
     list_of_logs = glob.glob(os.path.join(logdir
                                          ,'{0}*.log'.format(logtype)))
 
-    latest_log = max(list_of_logs, key=os.path.getctime)
+    latest_log = max(list_of_logs, key=os.path.getmtime)
 
     with open(os.path.join(logdir, latest_log), 'r') as file:
         loglines = file.read()
