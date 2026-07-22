@@ -21,9 +21,14 @@ def getlogfile(logdir
     list_of_logs = glob.glob(os.path.join(logdir
                                          ,'{0}*.log'.format(logtype)))
 
-    latest_log = max(list_of_logs, key=os.path.getmtime)
+    if not list_of_logs:
+        raise ValueError('No logs found for type "{0}" in {1}'.format(
+            logtype
+           ,logdir))
 
-    with open(os.path.join(logdir, latest_log), 'r') as file:
+    latest_log_path = max(list_of_logs, key=os.path.getmtime)
+
+    with open(latest_log_path, 'r') as file:
         loglines = file.read()
 
     return loglines
