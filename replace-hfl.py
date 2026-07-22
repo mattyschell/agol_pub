@@ -10,6 +10,26 @@ import sys
 import tempfile
 import time
 
+# Set up logging early, before importing local modules that depend on arcgis
+# This ensures we capture errors (e.g., license errors) that occur during import
+_timestr = time.strftime("%Y%m%d-%H%M%S")
+_targetlogdir = os.environ.get('TARGETLOGDIR', tempfile.gettempdir())
+
+# Create a temporary log file. After argparse runs, we may reconfigure
+# it with the correct itemid, but at minimum this captures import-time errors.
+_templog = os.path.join(
+    _targetlogdir
+   ,'replace-hfl-temp-{0}.log'.format(_timestr)
+)
+
+try:
+    logging.basicConfig(filename=_templog
+                       ,level=logging.INFO
+                       ,format='%(asctime)s - %(levelname)s - %(message)s'
+                       ,datefmt='%Y-%m-%d %H:%M:%S')
+except Exception:
+    pass
+
 import organization
 import publisher
 
@@ -62,21 +82,28 @@ def main():
 
     args = parser.parse_args()
 
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    targetlogdir = os.environ.get('TARGETLOGDIR'
-                                 ,tempfile.gettempdir())
-    targetlog = os.path.join(
-        targetlogdir
+    # Reconfigure logging with the correct itemid-based filename
+    _timestr = time.strftime("%Y%m%d-%H%M%S")
+    _targetlogdir = os.environ.get('TARGETLOGDIR', tempfile.gettempdir())
+    _targetlog = os.path.join(
+        _targetlogdir
        ,'replace-hfl-{0}-{1}.log'.format(
             args.itemid
-           ,timestr
+           ,_timestr
         )
     )
-
-    logging.basicConfig(filename=targetlog
-                       ,level=logging.INFO
-                       ,format='%(asctime)s - %(levelname)s - %(message)s'
-                       ,datefmt='%Y-%m-%d %H:%M:%S')
+    
+    # Remove temporary handler and add new handler with correct filename
+    _logger = logging.getLogger()
+    for _handler in _logger.handlers[:]:
+        _logger.removeHandler(_handler)
+        _handler.close()
+    
+    _file_handler = logging.FileHandler(_targetlog)
+    _file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s'
+       ,datefmt='%Y-%m-%d %H:%M:%S'))
+    _logger.addHandler(_file_handler)
 
     try:
 
