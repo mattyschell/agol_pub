@@ -9,29 +9,54 @@ import os
 import sys
 import tempfile
 import time
+import traceback
 
 # Set up logging early, before importing local modules that depend on arcgis
 # This ensures we capture errors (e.g., license errors) that occur during import
 _timestr = time.strftime("%Y%m%d-%H%M%S")
 _targetlogdir = os.environ.get('TARGETLOGDIR', tempfile.gettempdir())
 
-# Create a temporary log file. After argparse runs, we may reconfigure
-# it with the correct itemid, but at minimum this captures import-time errors.
-_templog = os.path.join(
-    _targetlogdir
-   ,'replace-hfl-temp-{0}.log'.format(_timestr)
-)
+# Extract itemid from sys.argv if present (it's the first positional arg after subcommand)
+# Arguments are like: replace-hfl.py overwrite <itemid> <csvpath>
+#                  or: replace-hfl.py swap-view <itemid> <index> <new_source>
+_itemid = None
+if len(sys.argv) > 2:
+    _itemid = sys.argv[2]
+
+# Ensure log directory exists
+try:
+    os.makedirs(_targetlogdir, exist_ok=True)
+except Exception as e:
+    print('Failed to create log directory {0}: {1}'.format(
+        _targetlogdir, e), file=sys.stderr)
+
+# Create log file with itemid if available, otherwise use temp name
+if _itemid:
+    _log_path = os.path.join(
+        _targetlogdir
+       ,'replace-hfl-{0}-{1}.log'.format(_itemid, _timestr)
+    )
+else:
+    _log_path = os.path.join(
+        _targetlogdir
+       ,'replace-hfl-temp-{0}.log'.format(_timestr)
+    )
 
 try:
-    logging.basicConfig(filename=_templog
+    logging.basicConfig(filename=_log_path
                        ,level=logging.INFO
                        ,format='%(asctime)s - %(levelname)s - %(message)s'
                        ,datefmt='%Y-%m-%d %H:%M:%S')
-except Exception:
-    pass
+except Exception as e:
+    print('Failed to set up logging: {0}'.format(e), file=sys.stderr)
 
-import organization
-import publisher
+try:
+    import organization
+    import publisher
+except Exception as e:
+    logging.error('Failed to import organization/publisher: {0}'.format(e))
+    logging.error(traceback.format_exc())
+    sys.exit(1)
 
 
 def _result_ok(result):
