@@ -34,11 +34,17 @@ def getlogfile(logdir
     return loglines
 
 def getspecialcontent(notification
-                     ,baseurl='https://nyc.maps.arcgis.com/home/item.html?id='
+                     ,itembaseurl='https://nyc.maps.arcgis.com/home/item.html?id='
+                     ,groupbaseurl='https://nyc.maps.arcgis.com/home/group.html?id='
                      ,wiki='https://appdevwiki.nycnet/appdev/index.php?title=GIS_Data_Maintenance_Scripts#CSCL_Publishing_To_NYCMaps'):
 
     # PRD: Replaced and QAd nycmaps cscl_pub.gdb item 9163b04952354da2bf748abe1788e985
     itemid = notification.split()[-1]
+
+    if 'group' in notification.lower():
+        baseurl = groupbaseurl
+    else:
+        baseurl = itembaseurl
 
     scontent  = '{0}{1}'.format(baseurl
                                ,itemid)
